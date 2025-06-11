@@ -14,7 +14,7 @@
 
 import logging
 import pathlib
-import stat
+import shutil
 from typing import List, Optional
 
 from composer_local_dev import console, constants, errors, utils
@@ -146,22 +146,30 @@ def get_available_environments(composer_dir: pathlib.Path):
 
 def fix_file_permissions(
     entrypoint: pathlib.Path,
+    run: pathlib.Path,
     requirements: pathlib.Path,
-    airflow_db: pathlib.Path,
+    db_path: pathlib.Path,
 ) -> None:
     """
     Fix file permissions for files used in Docker container when running under
     Linux OS. Windows and MAC OS X don't need it.
     Args:
         entrypoint: Init script of the container. It needs to be executable.
+        run: Script used to run commands as the right user. It needs to be executable.
         requirements: List of PyPi packages to be installed in the container.
         It needs to be readable by all users.
-        airflow_db: path to Airflow Sqlite database file.
+        db_path: path to Airflow Sqlite database file or PostgreSQL data folder.
         It needs to be writeable.
     """
+    if utils.is_windows_os():
+        return
     make_file_readable_and_executable(entrypoint)
+    make_file_readable_and_executable(run)
     make_file_writeable(requirements)
-    make_file_writeable(airflow_db)
+    if db_path.is_dir():
+        make_file_readable_and_executable(db_path)
+    else:
+        make_file_writeable(db_path)
 
 
 def make_file_readable_and_executable(file_path: pathlib.Path) -> None:
@@ -173,13 +181,16 @@ def make_file_writeable(file_path: pathlib.Path) -> None:
 
 
 def fix_line_endings(
-    entrypoint: pathlib.Path, requirements: pathlib.Path
+    entrypoint: pathlib.Path,
+    run: pathlib.Path,
+    requirements: pathlib.Path,
 ) -> None:
     """
     Fix windows line endings so the files created under Windows
     can be used in the docker container.
     """
     dos2unix_file(entrypoint)
+    dos2unix_file(run)
     dos2unix_file(requirements)
 
 
@@ -198,6 +209,12 @@ def create_empty_file(path: pathlib.Path, skip_if_exist: bool = True):
         return
     with open(path, "w"):
         pass
+
+
+def create_empty_folder(path: pathlib.Path, delete_if_exist: bool = False):
+    if delete_if_exist and path.exists():
+        shutil.rmtree(path)
+    return path.mkdir(parents=True, exist_ok=True)
 
 
 def assert_dag_path_exists(path: str) -> None:

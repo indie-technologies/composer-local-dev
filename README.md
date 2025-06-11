@@ -5,7 +5,7 @@
 ## Overview
 
 Composer Local Development CLI tool streamlines Apache Airflow DAG development
-for Cloud Composer 2 by running an Airflow environment locally. This local
+for Cloud Composer 2 and 3 by running an Airflow environment locally. This local
 Airflow environment uses an image of a specific Cloud Composer version.
 
 You can create a local Airflow environments based on an existing Cloud Composer
@@ -21,9 +21,13 @@ options.
 development purposes**. Cloud Composer does not support using locally
 deployed Cloud Composer images for production purposes.
 
-- Composer Local Development CLI tool supports only Cloud Composer 2 images.
-    You can use any version of Cloud Composer 2 with Composer Local
-    Development CLI tool.
+- Composer Local Development CLI tool supports only Cloud Composer 2 and 3 images.
+
+  - You can use any version of Cloud Composer 2 with Composer Local Development CLI tool.
+
+  - Composer 3 support starts from image versions `composer-3-airflow-2.9.3-build.20`,
+    `composer-3-airflow-2.10.2-build.13` and `composer-3-airflow-2.10.5-build.0`,
+    including all images of Airflow versions greater than `2.10.5`.
 
 - Composer Local Development CLI tool creates local Airflow environments in a
     directory where you run the `composer-dev create` command. To access your
@@ -127,6 +131,7 @@ composer-dev create \
   --project PROJECT_ID \
   --port WEB_SERVER_PORT \
   --dags-path LOCAL_DAGS_PATH \
+  --database DATABASE_ENGINE \
   LOCAL_ENVIRONMENT_NAME
 ```
 
@@ -137,7 +142,13 @@ Replace:
 - `WEB_SERVER_PORT` with the port that Airflow web server must listen at.
 - `LOCAL_DAGS_PATH` with the path to a local directory where the DAG files are
     located.
+- `DATABASE_ENGINE` with the database engine you wanted to use. You can use
+    `sqlite` or `postgresql` (default).
 - `LOCAL_ENVIRONMENT_NAME` with the name of this local Airflow environment.
+
+> If you want to use `LocalExecutor` as Airflow's Core Executor, you need
+> to use the `DATABASE_ENGINE` variable as `postgresql`. This is required
+> for the `LocalExecutor` to work properly.
 
 Example:
 
@@ -221,6 +232,15 @@ On Linux or MacOS, it's recommended that you run the container as the current ho
 `COMPOSER_CONTAINER_RUN_AS_HOST_USER=True` in `composer/<LOCAL_ENVIRONMENT_NAME>/variables.env`. But the feature is not
 available on Windows, so you might need to update the permissions of the mounted files and directories on the host to
 allow access by the user inside of the container.
+
+## Interaction with Kubernetes clusters
+
+By default, the file `~/.kube/config` is not mounted. The user can specify path to Kubernetes configuration file by
+exporting `KUBECONFIG` environment variable before starting environment.
+
+```bash
+export KUBECONFIG=~/.kube/config
+```
 
 ## Start a local Airflow environment
 
